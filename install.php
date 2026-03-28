@@ -28,12 +28,12 @@ $cnf_int = \FreePBX::Config();
 // Only include required classes and create anonymous class for thisInstaller
 
 $thisInstaller = new class{
-    use \FreePBX\modules\Sccp_Manager\sccpManTraits\helperFunctions;
     public $xml_data;
     public $sccpvalues;
     public $FreePBX;
     public $db;
     public $sccpHelpInfo = array();
+    use \FreePBX\modules\Sccp_Manager\sccpManTraits\helperFunctions;
 };
 
 $requiredClasses = array('aminterface', 'extconfigs');

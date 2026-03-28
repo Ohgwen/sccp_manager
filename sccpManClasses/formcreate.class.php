@@ -608,7 +608,7 @@ function addElementSLNA($child, $fvalues, $sccp_defaults, $npref, $installedLang
         </div>
         <?php
     }
-}
+
 
     function addElementSD($child, $fvalues, $sccp_defaults,$npref) {
       /*

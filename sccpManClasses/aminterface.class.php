@@ -16,6 +16,7 @@ class aminterface
     var $_error;
     var $_config;
     var $_test;
+    private $parent_class;
     private $_connect_state;
     private $_lastActionClass;
     private $_lastActionId;
@@ -50,7 +51,7 @@ class aminterface
     public function __construct($parent_class = null)
     {
         global $amp_conf;
-        $this->paren_class = $parent_class;
+        $this->parent_class = $parent_class;
         $this->_socket = false;
         $this->_connect_state = false;
         $this->_error = array();

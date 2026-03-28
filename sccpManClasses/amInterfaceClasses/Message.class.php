@@ -156,7 +156,7 @@ abstract class Message
                     }
                     if (filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)) {
                         return (boolean) $value;
-                    } elseif (filter_var($value, FILTER_SANITIZE_STRING, FILTER_NULL_ON_FAILURE)) {
+                    } elseif (is_string($value)) {
                         return (string) $value;
                     } elseif (filter_var($value, FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_NULL_ON_FAILURE)) {
                         return (string) htmlspecialchars($value, ENT_QUOTES);

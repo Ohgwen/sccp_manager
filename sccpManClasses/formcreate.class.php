@@ -6,12 +6,15 @@ class formcreate
 {
     use \FreePBX\modules\Sccp_Manager\sccpManTraits\helperFunctions;
 
+    public $buttonDefLabel;
+    public $buttonHelpLabel;
+
     public function __construct($parent_class = null) {
         $this->buttonDefLabel = 'chan-sccp';
         $this->buttonHelpLabel = 'site';
     }
 
-    function addElementIE ($child, $fvalues, $sccp_defaults, $npref) {
+function addElementIE($child, $fvalues, $sccp_defaults, $npref) {
         $res_input = '';
         $res_name = '';
         if ($npref == 'sccp_hw_') {
@@ -19,148 +22,79 @@ class formcreate
             $this->buttonHelpLabel = 'device';
         }
         $usingSysDefaults = true;
-        // if there are multiple inputs, take the first for res_id and shortId
         $shortId = (string)$child->input[0]->name;
-        $res_id = $npref.$shortId;
+        $res_id = $npref . $shortId;
+        
+        // Fix: Case sensitivity for $metainfo
         if (!empty($metainfo[$shortId])) {
             if ($child->meta_help == '1' || $child->help == 'Help!') {
                 $child->help = $metainfo[$shortId];
             }
         }
 
-        // --- Add Hidden option
-        $res_sec_class ='';
-        if (!empty($child ->class)) {
-            $res_sec_class = (string)$child ->class;
-        }
+        $res_sec_class = !empty($child->class) ? (string)$child->class : '';
         if (empty($child->nameseparator)) {
             $child->nameseparator = ' / ';
         }
-
         ?>
         <div class="element-container">
             <div class="row">
                 <div class="form-group <?php echo $res_sec_class; ?>">
                     <div class="col-md-3">
-                        <label class="control-label" for="<?php echo $res_id; ?>"><?php echo _($child->label);?></label>
+                        <label class="control-label" for="<?php echo $res_id; ?>"><?php echo _($child->label); ?></label>
                         <i class="fa fa-question-circle fpbx-help-icon" data-for="<?php echo $res_id; ?>"></i>
                     </div>
-        <?php
-                    if (!empty($sccp_defaults[$shortId]['systemdefault'])) {
-                        // There is a system default, so add button to customise or reset
-                        //-- Start include of defaults button --
-                        echo "<div class=col-md-3>";
-                    }
+                    <?php if (!empty($sccp_defaults[$shortId]['systemdefault'])): ?>
+                        <div class="col-md-3">
+                    <?php endif; ?>
 
-        // Can have multiple inputs for a field which are displayed with a separator
-        $i = 0;
-        foreach ($child->xpath('input') as $value) {
-            $res_n =  (string)$value->name;
-            $res_name = $npref . $res_n;
-            //if (!empty($fvalues[$res_n])) {
-            $value->value = $fvalues[$res_n]['data'];
-            if (!empty($fvalues[$res_n]['data'])) {
-                if ($sccp_defaults[$res_n]['systemdefault'] != $fvalues[$res_n]['data']) {
-                    $usingSysDefaults = false;
-                }
-            }
-            if (empty($value->type)) {
-                $value->type = 'text';
-            }
-            if (empty($value->class)) {
-                $value->class = 'form-control';
-            }
-            if ($i > 0) {
-                echo $child->nameseparator;
-            }
-            // Output current value
-            if (empty($value->value)) {
-                echo "{$res_n} has not been set";
-            }
-            echo $value->value;
-            $i ++;
-        }
-        if (!empty($sccp_defaults[$shortId]['systemdefault'])) {
-
-        ?>
-                    </div>
-                    <div class="col-md-4">
-                      <span class="radioset">
-                        <input type="checkbox"
-                            <?php
-                            echo " data-for={$res_id} data-type=text id=usedefault_{$res_id} ";
-                            if ($usingSysDefaults) {
-                                // Setting a site specific value
-                                echo "class=sccp-edit :checked ";
-                            } else {
-                                // reverting to chan-sccp default values
-                                echo "class=sccp-restore data-default={$sccp_defaults[$res_n]['systemdefault']} ";
+                    <?php
+                    $i = 0;
+                    foreach ($child->xpath('input') as $value) {
+                        $res_n = (string)$value->name;
+                        $value->value = isset($fvalues[$res_n]['data']) ? $fvalues[$res_n]['data'] : '';
+                        
+                        if (!empty($value->value)) {
+                            if ($sccp_defaults[$res_n]['systemdefault'] != $value->value) {
+                                $usingSysDefaults = false;
                             }
-                            ?>
-                        >
-                        <label
-                            <?php
-                            echo "for=usedefault_{$res_id} >";
-                            echo ($usingSysDefaults) ? "Customise" : "Use {$this->buttonDefLabel} defaults";
-                            ?>
-                        </label>
+                        }
+                        if ($i > 0) echo $child->nameseparator;
+                        echo !empty($value->value) ? $value->value : "{$res_n} " . _("has not been set");
+                        $i++;
+                    }
+                    ?>
 
-                      </span>
-                    </div>
+                    <?php if (!empty($sccp_defaults[$shortId]['systemdefault'])): ?>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="radioset">
+                                <input type="checkbox" data-for="<?php echo $res_id; ?>" data-type="text" id="usedefault_<?php echo $res_id; ?>" 
+                                    <?php echo $usingSysDefaults ? "class='sccp-edit' checked" : "class='sccp-restore' data-default='{$sccp_defaults[$shortId]['systemdefault']}'"; ?>>
+                                <label for="usedefault_<?php echo $res_id; ?>">
+                                    <?php echo $usingSysDefaults ? _("Customise") : _("Use") . " {$this->buttonDefLabel} " . _("defaults"); ?>
+                                </label>
+                            </span>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="row" id="edit_<?php echo $res_id; ?>" style="display: none">
                 <div class="form-group <?php echo $res_sec_class; ?>">
                     <div class="col-md-3">
-                        <i><?php echo "Enter new {$this->buttonHelpLabel} value for {$shortId}"; ?></i>
+                        <i><?php echo _("Enter new") . " {$this->buttonHelpLabel} " . _("value for") . " {$shortId}"; ?></i>
                     </div>
-
-                    <!-- Finish include of defaults button -->
-                    <?php
-                    // Close the conditional include of the defaults button opened at line ~47
-                  }
-                    ?>
-
                     <div class="col-md-9">
                         <?php
-                        $i=0;
-                        // Can have multiple inputs for a field displayed with a separator
+                        $i = 0;
                         foreach ($child->xpath('input') as $value) {
-                                $res_n =  (string)$value->name;
-                                $res_name = $npref . $res_n;
-                            if (empty($res_id)) {
-                                $res_id = $res_name;
-                            }
-                            if (!empty($fvalues[$res_n]['data'])) {
-                                $value->value = $fvalues[$res_n]['data'];
-                            }
-                            // Default to chan-sccp defaults, not xml defaults if reverting to defaults or empty
-                            if ((empty($value->value)) || ($usingSysDefaults)) {
-                                $value->value = $sccp_defaults[$res_n]['systemdefault'];
-                            }
-                            if (empty($value->type)) {
-                                $value->type = 'text';
-                            }
-                            if (empty($value->class)) {
-                                $value->class = 'form-control';
-                            }
-                            if ($i > 0) {
-                                echo $child->nameseparator;
-                            }
-                            echo '<input type="' . $value->type . '" class="' . $value->class . '" id="' . $res_id . '" name="' . $res_name . '" value="' . $value->value.'"';
-                            if (isset($value->options)) {
-                                foreach ($value->options ->attributes() as $optkey => $optval) {
-                                    echo  ' '.$optkey.'="'.$optval.'"';
-                                }
-                            }
-                            if (!empty($value->min)) {
-                                echo  ' min="'.$value->min.'"';
-                            }
-                            if (!empty($value->max)) {
-                                echo  ' max="'.$value->max.'"';
-                            }
-                            echo  '>';
-                            $i ++;
+                            $res_n = (string)$value->name;
+                            $res_name = $npref . $res_n;
+                            $val = (!empty($fvalues[$res_n]['data'])) ? $fvalues[$res_n]['data'] : $sccp_defaults[$res_n]['systemdefault'];
+                            
+                            if ($i > 0) echo $child->nameseparator;
+                            echo '<input type="text" class="form-control" id="' . $res_id . '_' . $i . '" name="' . $res_name . '" value="' . $val . '">';
+                            $i++;
                         }
                         ?>
                     </div>
@@ -168,13 +102,13 @@ class formcreate
             </div>
             <div class="row">
                 <div class="col-md-12">
-                    <span id="<?php echo $res_id;?>-help" class="help-block fpbx-help-block"><?php echo _($child->help);?></span>
+                    <span id="<?php echo $res_id; ?>-help" class="help-block fpbx-help-block"><?php echo _($child->help); ?></span>
                 </div>
             </div>
         </div>
         <?php
     }
-
+    
     function addElementIED($child, $fvalues, $sccp_defaults,$npref, $napref) {
         //$Sccp_manager = \FreePBX::create()->Sccp_manager;
         // IED fields are arrays of networks and masks, or ip and ports.
@@ -625,100 +559,56 @@ class formcreate
         <?php
     }
 
-    function addElementSLNA($child, $fvalues, $sccp_defaults,$npref, $installedLangs) {
-    //       Input element Select SLS - System Language with add from external
-        global $amp_conf;
-        $res_n =  (string)$child ->name;
-        $res_id = $npref.$res_n;
-        $child->value ='';
+function addElementSLNA($child, $fvalues, $sccp_defaults, $npref, $installedLangs) {
+        $res_n = (string)$child->name;
+        $res_id = $npref . $res_n;
+        $child->value = '';
         $selectArray = array();
-        // $select_opt is an associative array for these types.
-        if (!empty($metainfo[$res_n])) {
-            if ($child->meta_help == '1' || $child->help == 'Help!') {
-                $child->help = $metaInfo[$res_n];
-            }
-        }
+        $select_opt = array();
 
-        switch ($child['type']) {
+        switch ((string)$child['type']) {
             case 'SLDA':
-                $select_opt = array('xx' => 'No language packs found');
-                if (!empty($installedLangs['languages']['have'])) {
-                    $select_opt = $installedLangs['languages']['have'];
-                }
+                $select_opt = !empty($installedLangs['languages']['have']) ? $installedLangs['languages']['have'] : array('xx' => _('No language packs found'));
                 $selectArray = $installedLangs['languages']['available'];
-                $requestType = 'locale';
                 break;
-
             case 'SLNA':
-                $select_opt = array('xx' => 'No country packs found');
-                if (!empty($installedLangs['countries']['have'])) {
-                    $select_opt = $installedLangs['countries']['have'];
-                }
+                $select_opt = !empty($installedLangs['countries']['have']) ? $installedLangs['countries']['have'] : array('xx' => _('No country packs found'));
                 $selectArray = $installedLangs['countries']['available'];
-                $requestType = 'country';
-              break;
+                break;
         }
 
-
-        if (empty($child->class)) {
-            $child->class = 'form-control';
-        }
-        if (!empty($fvalues[$res_n])) {
-            if (!empty($fvalues[$res_n]['data'])) {
-                $child->value = $fvalues[$res_n]['data'];
-            }
-        }
-        if (empty($child->value)) {
-            if (!empty($child->default)) {
-                $child->value = $child->default;
-            }
+        if (!empty($fvalues[$res_n]['data'])) {
+            $child->value = $fvalues[$res_n]['data'];
         }
 
         ?>
         <div class="element-container">
             <div class="row">
                 <div class="form-group">
-                    <?php
-                    include($amp_conf['AMPWEBROOT'] . '/admin/modules/sccp_manager/views/getFileModal.html');
-                    ?>
-
                     <div class="col-md-3">
-                        <label class="control-label" for="<?php echo $res_id; ?>"><?php echo _($child->label);?></label>
+                        <label class="control-label" for="<?php echo $res_id; ?>"><?php echo _($child->label); ?></label>
                         <i class="fa fa-question-circle fpbx-help-icon" data-for="<?php echo $res_id; ?>"></i>
                     </div>
-                    <div class="col-md-3">
-                        <div class = "lnet form-group form-inline" data-nextid=1>
-                            <?php
-                            echo  '<select name="'.$res_id.'" class="'. $child->class . '" id="' . $res_id . '">';
-                            foreach ($select_opt as $key => $val) {
-                                    $opt_key = $key;
-                                    $opt_val = $val;
-                                echo '<option value="' . $opt_val . '"';
-                                if ($opt_val == $child->value) {
-                                    echo ' selected="selected"';
-                                }
-                                echo "> {$opt_val} </option>";
-                            }
-                            ?>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                      <button type="button" class="btn btn-primary btn-lg" id="<?php echo $requestType;?>" data-toggle="modal" data-target=".get_ext_file_<?php echo $requestType;?>"><i class="fa fa-bolt"></i> <?php echo _("Get $requestType from Provisioner");?>
-                      </button>
+                    <div class="col-md-9">
+                        <select name="<?php echo $res_id; ?>" class="form-control" id="<?php echo $res_id; ?>">
+                            <?php foreach ($select_opt as $key => $val): ?>
+                                <option value="<?php echo $key; ?>" <?php echo ($key == $child->value) ? 'selected' : ''; ?>>
+                                    <?php echo $val; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-12">
-                <span id="<?php echo $res_id;?>-help" class="help-block fpbx-help-block"><?php echo _($child->help);?></span>
+                    <span id="<?php echo $res_id; ?>-help" class="help-block fpbx-help-block"><?php echo _($child->help); ?></span>
                 </div>
             </div>
         </div>
-
         <?php
-
     }
+}
 
     function addElementSD($child, $fvalues, $sccp_defaults,$npref) {
       /*

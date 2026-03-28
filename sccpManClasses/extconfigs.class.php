@@ -4,6 +4,12 @@ namespace FreePBX\modules\Sccp_manager;
 
 class extconfigs
 {
+    /* * PHP 8.2 Fix: Explicitly declare properties to avoid 
+     * "Creation of dynamic property is deprecated" 
+     */
+    private $paren_class;
+    private $sccpvalues = array(); 
+
     public function __construct($parent_class = null)
     {
         $this->paren_class = $parent_class;
@@ -15,7 +21,7 @@ class extconfigs
             'about' => 'Default Settings and Enums ver: ' . $Ver);
     }
 
-    public function getExtConfig($id = '', $index = '') {
+public function getExtConfig($id = '', $index = '') {
         $result = array();
         switch ($id) {
             case 'keyset':
@@ -23,28 +29,25 @@ class extconfigs
                 break;
             case 'sccp_lang':
                 if (empty($index)) {
-                    return $this->cisco_language;  // return language array
+                    return $this->cisco_language;  
                 } elseif (!empty($this->cisco_language[$index])) {
-                    return $this->cisco_language[$index]; // return the matched value
+                    return $this->cisco_language[$index]; 
                 }
                 break;
             case 'sccpDefaults':
                 $result = $this->sccpDefaults;
                 break;
-            case 'sccp_timezone': // Sccp manager: 1303; server_info: 122
-                $result = array();
-
+            case 'sccp_timezone': 
                 if (empty($index)) {
                     return array('offset' => '00', 'daylight' => '', 'cisco_code' => 'Greenwich Standard Time');
                 }
 
-                //See if DST is used in this TZ. Test if DST setting is different at
-                //various future intervals. If dst changes, this TZ uses dst
                 $usesDaylight = false;
                 $haveDstNow = date('I');
                 $futureDateArray = array(2,4,6,8);
                 foreach ($futureDateArray as $numMonths) {
-                    $futureDate = (new \DateTime(null,new \DateTimeZone($index)))->modify("+{$numMonths} months");
+                    /* PHP 8 Fix: Ensure curly braces are used correctly for interpolation */
+                    $futureDate = (new \DateTime(null, new \DateTimeZone($index)))->modify("+{$numMonths} months");
                     if ($futureDate->format('I') != $haveDstNow) {
                         $usesDaylight = true;
                         break;
@@ -52,43 +55,34 @@ class extconfigs
                 }
                 $thisTzOffset = (new \DateTime(null, new \DateTimeZone($index)))->getOffset();
 
-                // Now look for a match in cisco_tz_array based on offset and DST
-                // First correct offset if we have DST now as cisco offsets are
-                // based on non dst offsets
                 $tmpOffset = $thisTzOffset / 60;
                 if ($haveDstNow) {
                     $tmpOffset = $tmpOffset - 60;
                 }
                 foreach ($this->cisco_timezone as $key => $value) {
                     if (($value['offset'] == $tmpOffset) and ( $value['daylight'] == $usesDaylight )) {
-                        // This code may not be the one typically used, but it has the correct values.
                         $cisco_code = $key . ' Standard' . (($usesDaylight) ? '/Daylight' : '') . ' Time';
-
+                        
+                        // Ensure sccpvalues is handled safely
                         $this->sccpvalues['tzoffset']['data'] = $tmpOffset;
 
                         return array('offset' => $tmpOffset, 'daylight' => ($usesDaylight) ? 'Daylight' : '', 'cisco_code' => $cisco_code);
-                        break;
                     }
                 }
                 return array('offset' => '00', 'daylight' => '', 'cisco_code' => 'Greenwich Standard Time');
 
-                break;
             default:
                 return array('noId');
-                break;
         }
+
         if (empty($index)) {
             return $result;
         } else {
-            if (isset($result[$index])) {
-                return $result[$index];
-            } else {
-                return array();
-            }
+            return isset($result[$index]) ? $result[$index] : array();
         }
     }
 
-    private function get_cisco_time_zone($tzc)
+private function get_cisco_time_zone($tzc)
     {
         $tzdata = $this->cisco_timezone[$tzc];
         $cisco_code = $tzc . ' Standard' . (($tzdata['daylight']) ? '/Daylight' : '') . ' Time';
@@ -364,31 +358,34 @@ class extconfigs
         return $settingsFromDb;
     }
 
-    public function validate_RealTime( $connector )
+public function validate_RealTime( $connector )
     {
-        // This method only checks that asterisk is correctly configured for Realtime
-        // It is preventative and does not change anything for Sccp_manager
         global $amp_conf;
-        $res = array();
-/*        if (empty($connector)) {
-            $connector = 'sccp';
-        }
-        $cnf_int = \FreePBX::Config();
-        $cnf_wr = \FreePBX::WriteConfig();
-*/
+        // PHP 8 Fix: Initialize array keys to avoid "Undefined Array Key" warnings
+        $res = array(
+            'sccpdevice' => '',
+            'sccpline' => '',
+            'extconfigfile' => '',
+            'mysqlconfig' => ''
+        );
+
         $cnf_read = \FreePBX::LoadConfig();
 
-        // We are running inside FreePBX so must use the same database
-        $def_config = array('sccpdevice' => 'mysql,' . $amp_conf['AMPDBNAME'] . ',sccpdeviceconfig', 'sccpline' => 'mysql,' . $amp_conf['AMPDBNAME'] . ',sccplineconfig');
+        $def_config = array(
+            'sccpdevice' => 'mysql,' . $amp_conf['AMPDBNAME'] . ',sccpdeviceconfig', 
+            'sccpline' => 'mysql,' . $amp_conf['AMPDBNAME'] . ',sccplineconfig'
+        );
         $backup_ext = array('_custom.conf', '.conf', '_additional.conf');
-        $def_bd_config = array('dbhost' => $amp_conf['AMPDBHOST'], 'dbname' => $amp_conf['AMPDBNAME'],
-                              'dbuser' => $amp_conf['AMPDBUSER'], 'dbpass' => $amp_conf['AMPDBPASS'],
-                              'dbport' => '3306', 'dbsock' => '/var/lib/mysql/mysql.sock'
-                              );
+        $def_bd_config = array(
+            'dbhost' => $amp_conf['AMPDBHOST'], 
+            'dbname' => $amp_conf['AMPDBNAME'],
+            'dbuser' => $amp_conf['AMPDBUSER'], 
+            'dbpass' => $amp_conf['AMPDBPASS'],
+            'dbport' => '3306', 
+            'dbsock' => '/var/lib/mysql/mysql.sock'
+        );
         $dir = $amp_conf['ASTETCDIR'];
         $res_conf_sql = ini_get('pdo_mysql.default_socket');
-        $res_conf = '';
-        $ext_conf = '';
 
         foreach ($backup_ext as $fext) {
             if (file_exists($dir . '/extconfig' . $fext)) {
@@ -419,17 +416,14 @@ class extconfigs
         if (empty($res['sccpline'])) {
             $res['extconfig'] = ' Option "Sccpline" is not configured ';
         }
-
         if (empty($res['extconfigfile'])) {
             $res['extconfig'] = 'File extconfig.conf does not exist';
         }
 
-        if (!empty($res_conf_sql)) {
-            if (file_exists($res_conf_sql)) {
-                $def_bd_config['dbsock'] = $res_conf_sql;
-            }
+        if (!empty($res_conf_sql) && file_exists($res_conf_sql)) {
+            $def_bd_config['dbsock'] = $res_conf_sql;
         }
-        // Check for mysql config files - should only be one depending on version
+
         $mySqlConfigFiles = [ 'res_mysql.conf', 'res_config_mysql.conf' ];
         foreach ($mySqlConfigFiles as $sqlConfigFile) {
             if (file_exists( $dir . '/' . $sqlConfigFile )) {
@@ -448,7 +442,7 @@ class extconfigs
         }
 
         if (empty($res['mysqlconfig'])) {
-            $res['mysqlconfig'] = 'Realtime Error: neither res_config_mysql.conf nor res_mysql.conf found in the path : ' . $dir;
+            $res['mysqlconfig'] = 'Realtime Error: neither res_config_mysql.conf nor res_mysql.conf found in: ' . $dir;
         }
         return $res;
     }

@@ -12,6 +12,9 @@ namespace FreePBX\modules\Sccp_manager;
 class dbinterface
 {
 
+    // Explicitly declare properties to prevent PHP 8.2+ deprecation warnings
+    private $paren_class;
+    private $db;
     private $val_null = 'NONE'; /// REPLACE to null Field
 
     public function __construct($parent_class = null)
@@ -50,6 +53,7 @@ class dbinterface
         $stmt = '';
         $stmts = '';
         $stmtU = '';
+        $raw_settings = array(); // Initialize to avoid Undefined Variable error
 
         switch ($dataid) {
             case 'extGrid':
@@ -171,10 +175,10 @@ class dbinterface
             $stmts->execute();
             $raw_settings = $stmts->fetchAll(\PDO::FETCH_ASSOC);
         } elseif (!empty($stmtU)) {
-            //returns an assoc array indexed on first field
-          $stmtU->execute();
-          $raw_settings = $stmtU->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+            $stmtU->execute();
+            $raw_settings = $stmtU->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
         }
+        
         return $raw_settings;
     }
 
@@ -357,18 +361,17 @@ class dbinterface
     }
     //******** Get SIP settings *******
     public function getSipTableData(string $dataid, $line='') {
-        global $db;
+        // global $db;
         $tech = array();
         switch ($dataid) {
             case "DeviceById":
-                // TODO: This needs to be rewritten
-                $stmt = $this->db->prepare("SELECT keyword,data FROM sip WHERE id = '${line}'");
+                // PHP 8.2 Fix: Use {$line} instead of ${line}
+                $stmt = $this->db->prepare("SELECT keyword,data FROM sip WHERE id = '{$line}'");
                 $stmt->execute();
                 $tech = $stmt->fetchAll(\PDO::FETCH_COLUMN | \PDO::FETCH_GROUP);
                 foreach ($tech as &$value) {
                     $value = $value[0];
                 }
-
                 return $tech;
             case "extensionList";
                 $stmt = $this->db->prepare("SELECT id as name, data as label  FROM sip WHERE keyword = 'callerid' order by name");

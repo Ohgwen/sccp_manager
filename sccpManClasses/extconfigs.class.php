@@ -47,7 +47,7 @@ public function getExtConfig($id = '', $index = '') {
                 $futureDateArray = array(2,4,6,8);
                 foreach ($futureDateArray as $numMonths) {
                     /* PHP 8 Fix: Ensure curly braces are used correctly for interpolation */
-                    $futureDate = (new \DateTime(null, new \DateTimeZone($index)))->modify("+{$numMonths} months");
+                    $futureDate = (new \DateTime('now', new \DateTimeZone($index)))->modify("+{$numMonths} months");
                     if ($futureDate->format('I') != $haveDstNow) {
                         $usesDaylight = true;
                         break;

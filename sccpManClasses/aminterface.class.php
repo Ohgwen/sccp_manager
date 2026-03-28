@@ -12,19 +12,30 @@ namespace FreePBX\modules\Sccp_manager;
 class aminterface
 {
 
-    var $_socket;
-    var $_error;
-    var $_config;
-    var $_test;
+    private $_error;
+    private $_config;
+    private $_test;
+    private $_socket;
+
     private $_connect_state;
     private $_lastActionClass;
     private $_lastActionId;
     private $_lastRequestedResponseHandler;
+
     private $_ProcessingMessage;
     private $_DumpMessage;
-    private $debug_level = 1;
+
     private $_incomingRawMessage;
-    private $eventListEndEvent;
+    private $_incomingMsgObjectList;
+    private $_eventListeners;
+    private $eventListIsCompleted;
+    private $useAmiInterface;
+
+    public $eventListEndEvent;
+
+    private $debug_level = 1;
+    private $_context;
+    private $parent_class;
 
     public function load_subspace($parent_class = null)
     {
@@ -50,7 +61,7 @@ class aminterface
     public function __construct($parent_class = null)
     {
         global $amp_conf;
-        $this->paren_class = $parent_class;
+        $this->parent_class = $parent_class;
         $this->_socket = false;
         $this->_connect_state = false;
         $this->_error = array();
@@ -180,7 +191,7 @@ class aminterface
             $this->readBuffer();
             $info = stream_get_meta_data($this->_socket);
             if ($info['timed_out'] == true) {
-                $this->_errorException("Read waittime: " . ($this->socket_param['timeout']) . " exceeded (timeout).\n");
+                $this->_errorException("Read waittime: " . ($this->_config['timeout']) . " exceeded (timeout).\n");
                 return false;
             }
             if ($this->eventListIsCompleted[$this->_lastActionId]) {
@@ -232,7 +243,7 @@ class aminterface
     {
         $msgs = array();
         // Extract any complete messages and leave remainder for next read
-        while (($marker = strpos($this->_ProcessingMessage, aminterface\Message::EOM))) {
+        while (($marker = strpos($this->_ProcessingMessage, aminterface\Message::EOM)) !== false) {
             $msg = substr($this->_ProcessingMessage, 0, $marker);
             $this->_ProcessingMessage = substr(
                 $this->_ProcessingMessage,
@@ -296,7 +307,7 @@ class aminterface
         if ($_className) {
             if (class_exists($_className, true)) {
                 $responseClass = $_className;
-            } elseif ($responseHandler != false) {
+            } elseif ($this->_lastRequestedResponseHandler != false) {
                 $this->_errorException('Response Class ' . $_className . '  requested via responseHandler, could not be found');
             }
         }
@@ -310,7 +321,8 @@ class aminterface
     public function _eventObjFromMsg($message)
     {
         $eventType = explode(aminterface\Message::EOL,$message,2);
-        $name = trim(explode(':',$eventType[0],2)[1]);
+        $parts = explode(':', $eventType[0], 2);
+        $name = isset($parts[1]) ? trim($parts[1]) : '';
         $className = '\\FreePBX\\modules\\Sccp_manager\\aminterface\\' . $name . '_Event';
         if (class_exists($className, true) === false) {
             $className = '\\FreePBX\\modules\\Sccp_manager\\aminterface\\UnknownEvent';
@@ -432,6 +444,7 @@ class aminterface
         return $result;
     }
     function getSCCPConfigMetaData($segment = '') {
+        $metadata = [];
         if ($this->_connect_state) {
             $_action = new \FreePBX\modules\Sccp_manager\aminterface\SCCPConfigMetaDataAction($segment);
             $metadata = $this->send($_action)->getResult();
@@ -492,18 +505,19 @@ class aminterface
             $_action = new \FreePBX\modules\Sccp_manager\aminterface\CommandAction('realtime mysql status');
             $result = $this->send($_action)->getResult();
          }
-         if (is_array($result['Output'])) {
+         if (isset($result['Output']) && is_array($result['Output'])) {
              foreach ($result['Output'] as $aline) {
                  if (strlen($aline) > 3) {
                      $temp_strings = explode(' ', $aline);
                      $cmd_res_key = $temp_strings[0];
+                     $this_realm = '';
                      foreach ($temp_strings as $test_string) {
-                          if (strpos($test_string, '@')) {
+                          if (strpos($test_string, '@') !== false) {
                             $this_realm = $test_string;
                             break;
                           }
                      }
-                     $cmd_res[$cmd_res_key] = array('message' => $aline, 'realm' => $this_realm, 'status' => strpos($aline, 'connected') ? 'OK' : 'ERROR');
+                     $cmd_res[$cmd_res_key] = array('message' => $aline, 'realm' => $this_realm, 'status' => (strpos($aline, 'connected') !== false) ? 'OK' : 'ERROR');
                  }
             }
         }

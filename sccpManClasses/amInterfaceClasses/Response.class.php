@@ -98,8 +98,9 @@ class GenericResponse extends Response
 
 class Generic_Response extends Response
 {
-    public function __construct($rawContent)
     protected bool $eventListIsCompleted = false;
+    public function __construct($rawContent)
+    
     {
         // Only used for self contained responses.
         parent::__construct($rawContent);

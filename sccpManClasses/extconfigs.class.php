@@ -53,7 +53,7 @@ public function getExtConfig($id = '', $index = '') {
                         break;
                     };
                 }
-                $thisTzOffset = (new \DateTime(null, new \DateTimeZone($index)))->getOffset();
+                $thisTzOffset = (new \DateTime('now', new \DateTimeZone($index)))->getOffset();
 
                 $tmpOffset = $thisTzOffset / 60;
                 if ($haveDstNow) {

@@ -336,7 +336,7 @@ private function get_server_sccp_bind($data_values = array())
 
         return $res;
     }
-}
+
 
     function create_SEP_SIP_XML($store_path = '', $data_values = array(), $dev_config = array(), $dev_id = '', $lang_info = array())
     {

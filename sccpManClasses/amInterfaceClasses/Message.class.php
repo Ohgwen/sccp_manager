@@ -231,6 +231,7 @@ abstract class IncomingMessage extends Message
 {
 
     protected $rawContent;
+    protected $_completed = false;
 
     public function getEventList()
     {

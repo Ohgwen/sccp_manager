@@ -15,6 +15,7 @@ global $thisInstaller;
 global $cnf_int;
 global $sccp_compatible;
 global $cnf_wr;
+public $xml_data;
 
 $mobile_hw = '0';
 $autoincrement = (($amp_conf["AMPDBENGINE"] == "sqlite") || ($amp_conf["AMPDBENGINE"] == "sqlite3")) ? "AUTOINCREMENT" : "AUTO_INCREMENT";

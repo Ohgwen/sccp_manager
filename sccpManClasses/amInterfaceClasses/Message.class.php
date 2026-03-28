@@ -244,7 +244,6 @@ abstract class IncomingMessage extends Message
 
     public function isComplete()
     {
-        protected $_completed = false;
         return $this->_completed;
     }
 

@@ -34,6 +34,7 @@ class UnknownEvent extends Event
 {
     public function __construct($rawContent = '')
     {
+        parent::__construct($rawContent);
     }
 }
 

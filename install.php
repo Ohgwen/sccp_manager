@@ -488,7 +488,7 @@ function InstallDB_updateSchema($db_config)
 
                 if (!empty($tab_modif[$fld_id]['def_modify'])) {
                     // Check if def_modify value is same as current value
-                    if (strtoupper($tab_modif[$fld_id]['def_modify']) == strtoupper($tabl_data['Default'])) {
+                    if (strtoupper($tab_modif[$fld_id]['def_modify'] ?? '') == strtoupper($tabl_data['Default'] ?? '')) {
                         // Defaults have not changed so unset
                         unset($tab_modif[$fld_id]['def_modify']);
                     } else {

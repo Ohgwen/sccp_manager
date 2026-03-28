@@ -75,13 +75,6 @@ class xmlinterface
         );
     }
 
-    public function info()
-    {
-        $Ver = '13.0.6';
-        return array('Version' => $Ver,
-            'about' => 'Create XML data interface ver: ' . $Ver);
-    }
-
 public function create_default_XML($store_path = '', $data_values = array(), $model_information = array(), $lang_info = array())
     {
         $data_path = $data_values['tftp_path'] ?? '';

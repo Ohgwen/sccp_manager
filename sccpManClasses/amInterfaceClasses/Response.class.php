@@ -178,6 +178,8 @@ class SCCPGeneric_Response extends Response
 {
     protected $_tables;
     private $_temptable;
+    private $thisSetEventEntryType = '';
+    protected $eventListEndEvent;
 
     public function __construct($rawContent)
     {
@@ -192,14 +194,14 @@ class SCCPGeneric_Response extends Response
         // Start of list is handled by the isList function in the Constructor
         // which also defines the list end event
 
-        if ( empty($thisSetEventEntryType)) {
+        if (empty($this->thisSetEventEntryType)) {
             // This is empty as soon as we have received a TableStart.
             // The next message is the first of the data sets
             // We use this variable in the switch to add set entries
-            if (strpos($event->getName(), 'Entry')) {
-                $thisSetEventEntryType = $event->getName();
+            if (strpos($event->getName(), 'Entry') !== false) {
+                $this->thisSetEventEntryType = $event->getName();
             } else {
-                $thisSetEventEntryType = 'undefinedAsThisIsNotASet';
+                $this->thisSetEventEntryType = 'undefinedAsThisIsNotASet';
             }
         }
         // Unknown events will cause an exception.
@@ -209,7 +211,7 @@ class SCCPGeneric_Response extends Response
             return;
         }
         switch ( $event->getName()) {
-            case $thisSetEventEntryType :
+            case $this->thisSetEventEntryType:   // changed from $thisSetEventEntryType
                 $this->_temptable['Entries'][] = $event;
                 break;
             case 'TableStart':
@@ -217,7 +219,7 @@ class SCCPGeneric_Response extends Response
                 $this->_temptable = array();
                 $this->_temptable['Name'] = $event->getTableName();
                 $this->_temptable['Entries'] = array();
-                $thisSetEventEntryType = '';
+                $this->thisSetEventEntryType = '';  // changed
                 break;
             case 'TableEnd':
                 //Close
@@ -226,7 +228,7 @@ class SCCPGeneric_Response extends Response
                 }
                 $this->_tables[$event->getTableName()] = $this->_temptable;
                 $this->_temptable = array();
-                $thisSetEventEntryType = 'undefinedAsThisIsNotASet';
+                $this->thisSetEventEntryType = 'undefinedAsThisIsNotASet'; // changed
 
                 // Finished the table. Now check to see if everything was received
                 // If counts do not match return false and table will not be
@@ -236,7 +238,7 @@ class SCCPGeneric_Response extends Response
                 }
                 break;
             //case $eventListEndEvent;
-            case $this->getKey('eventListEndEvent');
+            case $this->getKey('eventListEndEvent'):
                 // Have the list end event. The correct number of entries is verified in the event constructor
                 $this->_events['ClosingEvent'] = $event;
                 $this->eventListEndEvent = null;

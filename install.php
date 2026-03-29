@@ -416,7 +416,7 @@ function InstallDB_updateSchema($db_config)
         $sqlFields = rtrim($sqlFields, ",");
         $stmt = $db->prepare("SELECT name, " . $sqlFields . " FROM " . $table . " WHERE " . $sqlMatch);
         $stmt->execute();
-        $dbResult = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+        $dbResult = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         // Now move any data found from _Column to Column. This is safe as the two should not exist.
         if (!empty($dbResult)) {
             foreach ($dbResult as $name => $columnArr) {
@@ -447,11 +447,12 @@ function InstallDB_updateSchema($db_config)
         $sql_rename = '';
 
         $stmt = $db->prepare("DESCRIBE {$tabl_name}");
-        $stmt->execute();
-        $db_result = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
-        if (DB::IsError($db_result)) {
-            die_freepbx("Can not get information for " . $tabl_name . " table\n");
+        if (!$stmt->execute()) {
+            $error = $stmt->errorInfo();
+            die_freepbx("DESCRIBE failed for {$tabl_name}: " . $error[2]);
         }
+        
+        $db_result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // filter modifications based on field existance and prepare sql
         foreach ($db_result as $fld_id => $tabl_data) {
@@ -461,7 +462,7 @@ function InstallDB_updateSchema($db_config)
                 // occur as columns that are dropped should no longer be in the module.xml schema
                 // and so Doctrine will have already dropped them.
                 if (!empty($tab_modif[$fld_id]['drop'])) {
-                    $sql_create .= "DROP COLUMN {$row_fld}, ";
+                    $sql_create .= "DROP COLUMN {$fld_id}, ";
                     unset($tab_modif[$fld_id]['drop']);
                     continue;
                 }
@@ -714,9 +715,6 @@ function InstallDB_updateSchema($db_config)
     outn("<li>" . _("Fill sccpdevmodel") . "</li>");
     $sql = "REPLACE INTO sccpdevmodel (model, vendor, dns, buttons, loadimage, loadinformationid, enabled, nametemplate) VALUES" . implode(',',$devModelArr);
     $check = $db->query($sql);
-    if (DB::IsError($check)) {
-        die_freepbx("Can not create sccpdevmodel table, error:$check\n");
-    }
     return;
 }
 
@@ -748,9 +746,6 @@ function InstallDB_createButtonConfigTrigger()
         END IF;
         END;";
     $check = $db->query($sql);
-    if (DB::IsError($check)) {
-        die_freepbx("Can not modify sccpdevice table\n");
-    }
     outn("<li>" . _("(Re)Create trigger Ok") . "</li>");
     return true;
 }
@@ -760,9 +755,6 @@ function InstallDB_updateDBVer($sccp_compatible)
     outn("<li>" . _("Update DB Ver") . "</li>");
     $sql = "REPLACE INTO `sccpsettings` (`keyword`, `data`, `seq`, `type`) VALUES ('SccpDBmodel', '". $sccp_compatible. "','30','0');";
     $results = $db->query($sql);
-    if (DB::IsError($results)) {
-        die_freepbx(sprintf(_("Error updating sccpsettings. Command was: %s; error was: %s "), $sql, $results->getMessage()));
-    }
     return true;
 }
 
@@ -850,12 +842,12 @@ function installDbPopulateSccpline() {
     $sql = "SELECT id AS name, user AS accountcode, description AS label FROM devices WHERE tech='sccp'";
     $stmt = $db->prepare($sql);
     $stmt->execute();
-    $freePbxExts = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+    $freePbxExts = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
     $sql = "SELECT name, accountcode, label FROM sccpline";
     $stmt = $db->prepare($sql);
     $stmt->execute();
-    $sccpExts = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+    $sccpExts = $stmt->fetchAll(\PDO::FETCH_ASSOC);
     $linesToCreate = array_diff_assoc($freePbxExts, $sccpExts);
 
     foreach ($linesToCreate as $key => $valArr) {
@@ -866,9 +858,6 @@ function installDbPopulateSccpline() {
         $stmt->bindParam(':description',$description,\PDO::PARAM_STR);
         $stmt->bindParam(':label',$valArr['label'],\PDO::PARAM_STR);
         $stmt->execute();
-        if (DB::IsError($stmt)) {
-            die_freepbx(sprintf(_("Error inserting into sccpline. Command was: %s; error was: %s "), $stmt, $stmt->getMessage()));
-        }
     }
 }
 
@@ -1095,9 +1084,6 @@ function checkTftpServer() {
     foreach ($settingsFromDb as $settingToSave) {
         $sql = "REPLACE INTO sccpsettings (keyword, data, seq, type, systemdefault) VALUES ('{$settingToSave['keyword']}', '{$settingToSave['data']}', {$settingToSave['seq']}, {$settingToSave['type']}, '{$settingToSave['systemdefault']}')";
         $results = $db->query($sql);
-        if (DB::IsError($results)) {
-            die_freepbx(_("Error updating sccpsettings. $sql"));
-        }
     }
     getMasterFileList($tftpRootPath);
     return;
@@ -1134,7 +1120,7 @@ function cleanUpSccpSettings() {
     // Get current default settings from db
     $stmt = $db->prepare("SELECT keyword, sccpsettings.* FROM sccpsettings");
     $stmt->execute();
-    $settingsFromDb = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+    $settingsFromDb = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
     // See if a previous version was installed
     outn("<li>" . _("Checking for previous version of Sccp_manager.") . "</li>");
@@ -1230,7 +1216,7 @@ function cleanUpSccpSettings() {
     foreach ($tablesToDescribe as $theTable) {
         $stmt = $db->prepare("DESCRIBE {$theTable}");
         $stmt->execute();
-        $tableDesc = $stmt->fetchAll(\PDO::FETCH_ASSOC|\PDO::FETCH_UNIQUE);
+        $tableDesc = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         foreach ($tableDesc as $key => $valArr) {
             if (strpos($valArr['Type'], 'enum') !== 0) {
                 continue;
